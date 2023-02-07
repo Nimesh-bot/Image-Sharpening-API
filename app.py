@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Response
+import shutil
+from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -52,16 +53,37 @@ def get_results():
     folders = [f for f in os.listdir('./output') if os.path.isdir(os.path.join('./output', f))]
     return {"results": folders}
 
-@app.delete('/results/{folder_name}')
-def delete_result(folder_name):
-    # Delete the folder with the given name
-    try: 
-        os.rmdir('./output/' + folder_name)
-        return {"message": "Folder deleted successfully"}
-    except OSError as e:
-        return Response(
-            status_code=404,
-            content="Folder not found",
-        )
+@app.delete("/results/{folder_name}")
+async def delete_folder(folder_name: str):
+    # Validate the folder name
+    if not folder_name:
+        raise HTTPException(status_code=400, detail="Folder name is required.")
+    folder_initial_path = os.path.join(os.getcwd())
+    folder_path = os.path.join(folder_initial_path, 'output/', folder_name)
+    print(folder_path)
+    print(os.path.exists(folder_path))
+    if not os.path.exists(folder_path):
+        raise HTTPException(status_code=400, detail="Folder does not exist.")
 
+    # Delete the folder
+    try:
+        shutil.rmtree(folder_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unable to delete folder: {e}")
+
+    return {"message": f"Folder '{folder_name}' deleted successfully"}
+
+@app.delete('/results')
+async def delete_all_folders():
+    # Delete all folders in the output directory
+    try:
+        shutil.rmtree('./output')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unable to delete folder: {e}")
+
+    # Create a new output directory
+    os.makedirs('./output', exist_ok=True)
+
+    return {"message": "All folders deleted successfully"}
+    
 # python -m uvicorn app:app --reload
