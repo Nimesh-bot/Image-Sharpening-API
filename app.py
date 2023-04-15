@@ -64,7 +64,7 @@ async def delete_folder(folder_name: str):
     print(os.path.exists(folder_path))
     if not os.path.exists(folder_path):
         raise HTTPException(status_code=400, detail="Folder does not exist.")
-
+    
     # Delete the folder
     try:
         shutil.rmtree(folder_path)
