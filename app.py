@@ -26,16 +26,31 @@ def read_root():
     return {"Hello": "World"}
 
 @app.post("/sharpen")
-async def sharpen_image(file: UploadFile):
+async def sharpen_image(
+    file: UploadFile, 
+    kernelMartrixWidth: int, 
+    kernelMatrixHeight: int, 
+    sigmaX: float, 
+    sigmaY: float, 
+    contributionOriginalImage: float, 
+    contributionBlurryImage: float, 
+    gamma: float
+):
+    # kernetMatrixWidth and kernelMatrixHeight must be odd and greater than 1 and are the width and height of the Gaussian kernel (e.g. 5x5) This will affect the amount of blurring. More the value, more the blurring and more the sharpening.
+    # sigmaX, larger the value, more the blurring and more the sharpening.
+    # sigmaY, larger the value, more the blurring and more the sharpening. If 0, it is set to be equal to sigmaX
+    # contributionOriginalImage, means more the value more influence of the original image
+    # contributionBlurryImage, means more the value more influence of the blurry image
+    # gamma, larger the value, more added brightness 
     # Reading the image from the request
     image_file = await file.read()
     img = cv2.imdecode(np.frombuffer(image_file, np.uint8), cv2.IMREAD_UNCHANGED)
 
     # Gaussian kernel
-    gaussian_blur = cv2.GaussianBlur(img, (5,5), 2, 2)
+    gaussian_blur = cv2.GaussianBlur(img, (kernelMartrixWidth, kernelMatrixHeight), sigmaX, sigmaY)
 
     # Sharpening using addWeighted()
-    sharpened = cv2.addWeighted(img, 7.5, gaussian_blur, -6.5, 0)
+    sharpened = cv2.addWeighted(img, contributionOriginalImage, gaussian_blur, contributionBlurryImage, gamma)
 
     # Create a unique folder based on the current time
     folder_name = str(int(time.time()))
