@@ -1,5 +1,5 @@
 import shutil
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Form, HTTPException
 from fastapi import FastAPI, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,14 +27,15 @@ def read_root():
 
 @app.post("/sharpen")
 async def sharpen_image(
-    file: UploadFile, 
-    kernelMartrixWidth: int, 
-    kernelMatrixHeight: int, 
-    sigmaX: float, 
-    sigmaY: float, 
-    contributionOriginalImage: float, 
-    contributionBlurryImage: float, 
-    gamma: float
+    file: UploadFile = Form(...),
+    kernelMatrixWidth: int = Form(...),
+    kernelMatrixHeight: int = Form(...),
+    sigmaX: float = Form(...),
+    sigmaY: float = Form(...),
+    contributionOriginalImage: float = Form(...),
+    contributionBlurryImage: float = Form(...),
+    gamma: float = Form(...),
+    base_url: str = Form(...)
 ):
     # kernetMatrixWidth and kernelMatrixHeight must be odd and greater than 1 and are the width and height of the Gaussian kernel (e.g. 5x5) This will affect the amount of blurring. More the value, more the blurring and more the sharpening.
     # sigmaX, larger the value, more the blurring and more the sharpening.
@@ -45,10 +46,11 @@ async def sharpen_image(
     
     # Reading the image from the request
     image_file = await file.read()
+
     img = cv2.imdecode(np.frombuffer(image_file, np.uint8), cv2.IMREAD_UNCHANGED)
 
     # Gaussian kernel
-    gaussian_blur = cv2.GaussianBlur(img, (kernelMartrixWidth, kernelMatrixHeight), sigmaX, sigmaY)
+    gaussian_blur = cv2.GaussianBlur(img, (kernelMatrixWidth, kernelMatrixHeight), sigmaX, sigmaY)
 
     # Sharpening using addWeighted()
     sharpened = cv2.addWeighted(img, contributionOriginalImage, gaussian_blur, contributionBlurryImage, gamma)
@@ -61,7 +63,38 @@ async def sharpen_image(
     cv2.imwrite('./output/' + folder_name + '/original.jpg', img)
     cv2.imwrite('./output/' + folder_name + '/sharpened.jpg', sharpened)
 
-    return {"message": "Image sharpened successfully", "sharpened_path": 'http://127.0.0.1:8000/output/' + folder_name + '/sharpened.jpg'}
+    return {"message": "Image sharpened successfully", "sharpened_path": base_url + '/output/' + folder_name + '/sharpened.jpg'}
+
+@app.post("/re_sharpen")
+async def re_sharpen(
+    old_sharpened_image_folder: str = Form(...),
+    kernelMatrixWidth: int = Form(...), 
+    kernelMatrixHeight: int = Form(...),
+    sigmaX: float = Form(...),
+    sigmaY: float = Form(...),
+    contributionOriginalImage: float = Form(...),
+    contributionBlurryImage: float = Form(...),
+    gamma: float = Form(...),
+    base_url: str = Form(...)
+):
+    # delete sharpened image from the folder
+    os.remove('./output/' + old_sharpened_image_folder + '/sharpened.jpg')
+    
+    # get original image from the folder
+    img = cv2.imread('./output/' + old_sharpened_image_folder + '/original.jpg')
+    print(img, old_sharpened_image_folder)
+
+    # Gaussian kernel
+    gaussian_blur = cv2.GaussianBlur(img, (kernelMatrixWidth, kernelMatrixHeight), sigmaX, sigmaY)
+
+    # Sharpening using addWeighted()
+    sharpened = cv2.addWeighted(img, contributionOriginalImage, gaussian_blur, contributionBlurryImage, gamma)
+
+    # Save the sharpened image in the folder
+    cv2.imwrite('./output/' + old_sharpened_image_folder + '/sharpened.jpg', sharpened)
+
+    return {"message": "Image sharpened successfully", "sharpened_path": base_url + '/output/' + old_sharpened_image_folder + '/sharpened.jpg'}
+
 
 @app.get("/results")
 def get_results():
