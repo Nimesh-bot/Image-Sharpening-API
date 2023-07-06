@@ -42,6 +42,7 @@ async def sharpen_image(
     # contributionOriginalImage, means more the value more influence of the original image
     # contributionBlurryImage, means more the value more influence of the blurry image
     # gamma, larger the value, more added brightness 
+    
     # Reading the image from the request
     image_file = await file.read()
     img = cv2.imdecode(np.frombuffer(image_file, np.uint8), cv2.IMREAD_UNCHANGED)
