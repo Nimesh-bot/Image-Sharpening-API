@@ -95,7 +95,6 @@ async def re_sharpen(
 
     return {"message": "Image sharpened successfully", "sharpened_path": base_url + '/output/' + old_sharpened_image_folder + '/sharpened.jpg'}
 
-
 @app.get("/results")
 def get_results():
     # Get a list of all subdirectories in the output directory
