@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 import cv2
+import tensorflow as tf
 import numpy as np
 import time
 import os
@@ -77,13 +78,16 @@ async def re_sharpen(
     gamma: float = Form(...),
     base_url: str = Form(...)
 ):
+    print('values', old_sharpened_image_folder, kernelMatrixWidth, kernelMatrixHeight, sigmaX, sigmaY, contributionOriginalImage, contributionBlurryImage, gamma, base_url)
     # delete sharpened image from the folder
     os.remove('./output/' + old_sharpened_image_folder + '/sharpened.jpg')
     
     # get original image from the folder
     img = cv2.imread('./output/' + old_sharpened_image_folder + '/original.jpg')
-    print(img, old_sharpened_image_folder)
 
+    # convert original image to black and white
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
     # Gaussian kernel
     gaussian_blur = cv2.GaussianBlur(img, (kernelMatrixWidth, kernelMatrixHeight), sigmaX, sigmaY)
 
@@ -94,6 +98,27 @@ async def re_sharpen(
     cv2.imwrite('./output/' + old_sharpened_image_folder + '/sharpened.jpg', sharpened)
 
     return {"message": "Image sharpened successfully", "sharpened_path": base_url + '/output/' + old_sharpened_image_folder + '/sharpened.jpg'}
+
+# @app.post("/tf_sharpen")
+# async def tf_sharpen(
+#     model = tf.keras.applications.ResNet50(weights='imagenet')
+    
+#     image_file = await file.read()
+
+#     blurred_image = cv2.imdecode(np.frombuffer(image_file, np.uint8), cv2.IMREAD_UNCHANGED)
+#     blurred_image = cv2.cvtColor(blurred_image, cv2.COLOR_BGR2RGB)
+#     blurred_image = cv2.resize(blurred_image, (224, 224))
+#     blurred_image = np.expand_dims(blurred_image, axis=0)
+#     blurred_image = tf.keras.applications.resnet50.preprocess_input(blurred_image)
+
+#     deblurred_image = model.predict(blurred_image)
+#     deblurred_image = tf.keras.applications.resnet50.decode_predictions(deblurred_image)
+#     deblurred_image = np.squeeze(deblurred_image)
+#     deblurred_image = cv2.cvtColor(deblurred_image, cv2.COLOR_RGB2BGR)
+
+#     cv2.imwrite('./output/' + folder_name + '/original.jpg', blurred_image)
+#     cv2.imwrite('./output/' + folder_name + '/sharpened.jpg', deblurred_image)
+# )
 
 @app.get("/results")
 def get_results():
